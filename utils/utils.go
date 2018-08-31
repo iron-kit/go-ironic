@@ -1,0 +1,151 @@
+package utils
+
+import (
+	"fmt"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	pinyin "github.com/mozillazg/go-pinyin"
+	"golang.org/x/crypto/bcrypt"
+)
+
+/*
+ArrayContainer function
+检测数组里面是否包含某个字符串
+*/
+func StringArrayContainer(array []interface{}, found interface{}) bool {
+	for _, v := range array {
+		if v.(string) == found.(string) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func GenerateRangeNum(min, max int) int {
+	rand.Seed(time.Now().Unix())
+	randNum := rand.Intn(max-min) + min
+	return randNum
+}
+
+/*
+GenerateVerifyCode 根据时间生成验证码（初级算法）
+*/
+func GenerateVerifyCode() string {
+	// now := time.Now().UnixNano()
+	// currentTime := fmt.Sprintf("%d", now)
+	// return currentTime[len(currentTime)-4:]
+
+	code := GenerateRangeNum(1000, 9999)
+
+	return strconv.Itoa(code)
+}
+
+// GeneratePassword is a func to generate password
+func GeneratePassword(password string) (string, error) {
+	pwdByte := []byte(password)
+	bcryptPassword, err := bcrypt.GenerateFromPassword(pwdByte, bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(bcryptPassword[:]), nil
+}
+
+// CheckPassword check the password
+// return a nil on success
+func CheckPassword(plainPassword string, password string) error {
+	hashedPassword := []byte(password)
+	pwd := []byte(plainPassword)
+	return bcrypt.CompareHashAndPassword(hashedPassword, pwd)
+}
+
+// GenerateToken 生成Token
+func GenerateToken(user string) (string, error) {
+	// Create Token
+	token := jwt.New(jwt.SigningMethodHS256)
+	// // Set claims
+	claims := token.Claims.(jwt.MapClaims)
+	claims["iss"] = user + fmt.Sprintf("_%d", time.Now().Unix())
+	claims["user"] = user
+	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
+	t, err := token.SignedString([]byte("c13be55b40cf9dacb8231156ff28d41e65c8b48b"))
+	if err != nil {
+		return "", err
+	}
+	return t, nil
+}
+
+// DecodeToken is a func get token from string
+func DecodeToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method")
+		}
+
+		return []byte("c13be55b40cf9dacb8231156ff28d41e65c8b48b"), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, err
+}
+
+// GetDefaultAvatar 获取默认头像
+func GetDefaultAvatar() {
+
+}
+
+// GetNowUnixTime 获取当前的Unix时间(13位)
+func GetNowUnixTime() int64 {
+	now := time.Now()
+	return now.UnixNano() / 1e6
+}
+
+func MicroTimeFormat(microUnix int64, format string) string {
+	t := time.Unix(microUnix/1e3, 0)
+	return t.Format(format)
+}
+
+// Time2MicroUnix 将时间转化为 13位 Unix 时间
+func Time2MicroUnix(time *time.Time) int64 {
+	return time.UnixNano() / 1e6
+}
+
+// Hans2Pinyin 将汉字转换为拼音
+func Hans2Pinyin(hans string, sep string) string {
+	pinyinArgs := pinyin.NewArgs()
+	pinyinNameArr := pinyin.Pinyin(hans, pinyinArgs)
+	pinyinName := []string{}
+	for _, v := range pinyinNameArr {
+		pinyinName = append(pinyinName, v[0])
+	}
+
+	return strings.Join(pinyinName, sep)
+}
+
+func Unicode2Hans(unicode string) (string, error) {
+	var context string
+	sUnicode := strings.Split(unicode, "\\u")
+	for _, v := range sUnicode {
+		if len(v) < 1 {
+			continue
+		}
+		temp, err := strconv.ParseInt(v, 16, 32)
+		if err != nil {
+			return "", err
+		}
+		context += fmt.Sprintf("%c", temp)
+	}
+
+	return context, nil
+}
