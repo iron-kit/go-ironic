@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ import (
 )
 
 /*
-ArrayContainer function
+StringArrayContainer function
 检测数组里面是否包含某个字符串
 */
 func StringArrayContainer(array []interface{}, found interface{}) bool {
@@ -26,6 +27,10 @@ func StringArrayContainer(array []interface{}, found interface{}) bool {
 	return false
 }
 
+/*
+GenerateRangeNum is to generate a random num between min and max
+e.g. GenerateRangeNum(0, 9) => num of [0,9]
+*/
 func GenerateRangeNum(min, max int) int {
 	rand.Seed(time.Now().Unix())
 	randNum := rand.Intn(max-min) + min
@@ -33,14 +38,16 @@ func GenerateRangeNum(min, max int) int {
 }
 
 /*
-GenerateVerifyCode 根据时间生成验证码（初级算法）
+GenerateVerifyCode 以时间作为随机因子生成验证码
 */
-func GenerateVerifyCode() string {
-	// now := time.Now().UnixNano()
-	// currentTime := fmt.Sprintf("%d", now)
-	// return currentTime[len(currentTime)-4:]
+func GenerateVerifyCode(count int) string {
+	if count < 4 {
+		panic("count must getter than or equal to 4")
+	}
 
-	code := GenerateRangeNum(1000, 9999)
+	min := int(math.Pow(10.0, float64(count-1)))
+	max := int(math.Pow(10.0, float64(count))) - 1
+	code := GenerateRangeNum(min, max)
 
 	return strconv.Itoa(code)
 }

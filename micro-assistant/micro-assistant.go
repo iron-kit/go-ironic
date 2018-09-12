@@ -10,8 +10,10 @@ import (
 type Assistant struct {
 	Connection monger.Connection
 	// Ctx        context.Context
-	handers  map[string]Handler
-	services map[string]Servicer
+	serverName    string
+	handers       map[string]Handler
+	services      map[string]Servicer
+	errorPrefixID string
 }
 
 func (a *Assistant) Handler(name string) Handler {
@@ -31,6 +33,21 @@ type AssistantOption func(assistant *Assistant)
 func Connection(c monger.Connection) AssistantOption {
 	return func(assistant *Assistant) {
 		assistant.Connection = c
+	}
+}
+
+func ErrorID(id string) AssistantOption {
+	return func(assistant *Assistant) {
+		assistant.errorPrefixID = id
+	}
+}
+
+func Name(name string) AssistantOption {
+	return func(assistant *Assistant) {
+		assistant.serverName = name
+		if assistant.errorPrefixID == "" {
+			assistant.errorPrefixID = name
+		}
 	}
 }
 
@@ -137,6 +154,7 @@ func injectToHandler(handler Handler, assistant *Assistant) {
 	var servicer Servicer
 	handlert := reflect.TypeOf(&ihandler).Elem()
 	servicert := reflect.TypeOf(&servicer).Elem()
+	// errort := reflect.TypeOf(&)
 	for i := 0; i < fieldN; i++ {
 		field := ht.Field(i)
 		fieldTypeName := getTypeName(field.Type)
@@ -154,6 +172,17 @@ func injectToHandler(handler Handler, assistant *Assistant) {
 					fieldv.Set(reflect.ValueOf(assistant.Service(fieldTypeName)))
 				}
 				// fieldv.Set(reflect.New(field.Type))
+			} else {
+				if em, ok := fieldv.Interface().(*ErrorManager); ok {
+					if em == nil {
+						em = &ErrorManager{
+							baseID: assistant.errorPrefixID,
+						}
+						fieldv.Set(reflect.ValueOf(em))
+					} else {
+						em.baseID = assistant.errorPrefixID
+					}
+				}
 			}
 		}
 
@@ -162,7 +191,7 @@ func injectToHandler(handler Handler, assistant *Assistant) {
 
 func injectToService(srv Servicer, assistant *Assistant) {
 	srvt := reflect.TypeOf(srv)
-	// srvv := reflect.ValueOf(srv)
+	srvv := reflect.ValueOf(srv)
 
 	if srvt.Kind() == reflect.Ptr {
 		srvt = srvt.Elem()
@@ -175,12 +204,23 @@ func injectToService(srv Servicer, assistant *Assistant) {
 		// fieldv := srvv.Field(i)
 		if field.Type.Kind() == reflect.Ptr {
 			fielde := field.Type.Elem()
-
+			fieldv := srvv.Elem().Field(i)
 			var service Servicer
 			servicet := reflect.TypeOf(&service).Elem()
 			if fielde.Implements(servicet) {
 				// fieldv.Set()
 				fmt.Println("Will inject service :" + field.Name)
+			} else {
+				if em, ok := fieldv.Interface().(*ErrorManager); ok {
+					if em == nil {
+						em = &ErrorManager{
+							baseID: assistant.errorPrefixID,
+						}
+						fieldv.Set(reflect.ValueOf(em))
+					} else {
+						em.baseID = assistant.errorPrefixID
+					}
+				}
 			}
 		}
 
