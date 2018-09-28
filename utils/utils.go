@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -155,4 +157,42 @@ func Unicode2Hans(unicode string) (string, error) {
 	}
 
 	return context, nil
+}
+
+func ISOTime2Time(t ...string) (time.Time, error) {
+	defaultLayout := "2006-01-02 15:04:05.000 -0700 UTC"
+	// defaultLayout := time.RFC1123
+
+	if len(t) <= 0 {
+		// panic("Need a time string")
+		return time.Now(), errors.New("Need a time string")
+	}
+
+	if len(t) > 1 {
+		defaultLayout = t[1]
+	}
+
+	// 2018-09-06 09:55:42.405 +0000 UTC
+	return time.Parse(defaultLayout, t[0])
+}
+
+func ISOTime2MicroUnix(t ...string) int64 {
+	time, err := ISOTime2Time(t...)
+
+	if err != nil {
+		return 0
+	}
+
+	return Time2MicroUnix(&time)
+}
+
+func IsZero(v interface{}) bool {
+	t := reflect.TypeOf(v)
+
+	if !t.Comparable() {
+		return false
+	}
+
+	// val := reflect.ValueOf(v)
+	return reflect.DeepEqual(v, reflect.Zero(t).Interface())
 }

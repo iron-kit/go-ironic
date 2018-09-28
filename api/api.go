@@ -1,11 +1,22 @@
 package api
 
 import (
-	go_api "github.com/micro/go-api/proto"
 	"strings"
+
+	go_api "github.com/micro/go-api/proto"
 )
 
 type Helper struct{}
+
+func (h *Helper) GetHeaderFieldFromRequest(r *go_api.Request, key string) string {
+	header := r.GetHeader()
+	if val, found := header[key]; found {
+		// return val
+		strings.Join(val.GetValues(), ";")
+	}
+
+	return ""
+}
 
 func (h *Helper) GetTokenFromRequest(r *go_api.Request) string {
 	header := r.GetHeader()
@@ -22,7 +33,7 @@ func (h *Helper) GetTokenFromRequest(r *go_api.Request) string {
 	if authorization, ok := header["Authorization"]; ok {
 		val := authorization.GetValues()
 		t := val[len(val)-1]
-		tokenString = strings.TrimSpace(strings.Replace(t, "Bearer ", "", 1))
+		tokenString = strings.TrimSpace(strings.Replace(t, "Bearer", "", 1))
 	}
 	// resp.StatusCode = 200
 	// resp.Body = "Hello World"

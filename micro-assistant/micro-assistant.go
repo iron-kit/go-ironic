@@ -209,6 +209,14 @@ func injectToService(srv Servicer, assistant *Assistant) {
 			servicet := reflect.TypeOf(&service).Elem()
 			if fielde.Implements(servicet) {
 				// fieldv.Set()
+				// v := reflect.New(fielde)
+				// // v.MethodByName("Init").Ca
+				// if s, ok := v.Interface().(Servicer); ok {
+				// 	s.Init(
+				// 		assistant.Connection,
+				// 		s,
+				// 	)
+				// }
 				fmt.Println("Will inject service :" + field.Name)
 			} else {
 				if em, ok := fieldv.Interface().(*ErrorManager); ok {
