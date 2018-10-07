@@ -1,6 +1,7 @@
 module github.com/iron-kit/go-ironic
 
 require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-log/log v0.1.0
 	github.com/golang/protobuf v1.2.0
@@ -23,6 +24,8 @@ require (
 	github.com/mozillazg/go-pinyin v0.14.0
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.8.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/stretchr/testify v1.2.2
 	golang.org/x/crypto v0.0.0-20180927165925-5295e8364332
 	golang.org/x/net v0.0.0-20180926154720-4dfa2610cdf3 // indirect
 	golang.org/x/sys v0.0.0-20180928133829-e4b3c5e90611 // indirect
