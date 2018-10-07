@@ -126,7 +126,7 @@ func MicroTimeFormat(microUnix int64, format string) string {
 }
 
 // Time2MicroUnix 将时间转化为 13位 Unix 时间
-func Time2MicroUnix(time *time.Time) int64 {
+func Time2MicroUnix(time time.Time) int64 {
 	return time.UnixNano() / 1e6
 }
 
@@ -183,7 +183,7 @@ func ISOTime2MicroUnix(t ...string) int64 {
 		return 0
 	}
 
-	return Time2MicroUnix(&time)
+	return Time2MicroUnix(time)
 }
 
 func IsZero(v interface{}) bool {
