@@ -1,7 +1,12 @@
 package ironic
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"mime"
+	"mime/multipart"
+	"strings"
 
 	"github.com/iron-kit/go-ironic/validator"
 	go_api "github.com/micro/go-api/proto"
@@ -125,6 +130,45 @@ func (h *BaseHandler) Bind(req *go_api.Request, params interface{}) error {
 	return h.binder.Bind(req, params)
 	// byteBody := []byte(req.Body)
 	// return json.Unmarshal(byteBody, params)
+}
+
+func (h *BaseHandler) MultipartForm(req *go_api.Request) (*multipart.Form, error) {
+	ct := strings.Join(req.Header["Content-Type"].Values, ",")
+	mt, p, err := mime.ParseMediaType(ct)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(mt, MIMEMultipartForm) {
+		return nil, fmt.Errorf("%v does not contain multipart", mt)
+	}
+	r := multipart.NewReader(bytes.NewReader([]byte(req.Body)), p["boundary"])
+	return r.ReadForm(32 << 20)
+}
+
+func (h *BaseHandler) FormFile(req *go_api.Request, field string) (*multipart.FileHeader, error) {
+	form, err := h.MultipartForm(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if f, found := form.File[field]; found {
+		return f[0], nil
+	}
+
+	return nil, fmt.Errorf("field %v not found", field)
+}
+
+func (h *BaseHandler) FormFiles(req *go_api.Request, field string) ([]*multipart.FileHeader, error) {
+	form, err := h.MultipartForm(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if f, found := form.File[field]; found {
+		return f, nil
+	}
+
+	return nil, fmt.Errorf("field %v not found", field)
 }
 
 // func (h *BaseHandler) bindData(ptr interface{}, data map[string][]string, tag string) error {

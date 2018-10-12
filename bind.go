@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
-	go_api "github.com/micro/go-api/proto"
 	"reflect"
 	"strconv"
 	"strings"
+
+	go_api "github.com/micro/go-api/proto"
 )
 
 type (
@@ -58,6 +59,7 @@ func (b *DefaultBinder) Bind(req *go_api.Request, in interface{}) error {
 		params := b.parseParams(req.Post)
 
 		return b.bindData(in, params, "form")
+	// TODO support MIMEMultipartForm (form-data bind)
 	default:
 		return errors.New("UnsupportMediaType")
 	}
