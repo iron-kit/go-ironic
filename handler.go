@@ -139,7 +139,8 @@ func (h *BaseWebHandler) Bind(req *restful.Request, params interface{}) error {
 }
 
 func (h *BaseHandler) Error(ctx context.Context) *ErrorManager {
-	return ErrorManagerFromContext(ctx)
+	// return ErrorManagerFromContext(ctx)
+	return NewErrorManager("iunite.club.navo")
 }
 
 func (h *BaseHandler) Validate(v interface{}) error {
