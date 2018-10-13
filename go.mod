@@ -2,6 +2,7 @@ module github.com/iron-kit/go-ironic
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/emicklei/go-restful v2.8.0+incompatible
 	github.com/go-log/log v0.1.0
 	github.com/golang/protobuf v1.2.0
 	github.com/hashicorp/consul v1.2.3 // indirect

@@ -8,6 +8,8 @@ import (
 	"mime/multipart"
 	"strings"
 
+	restful "github.com/emicklei/go-restful"
+
 	"github.com/iron-kit/go-ironic/validator"
 	go_api "github.com/micro/go-api/proto"
 )
@@ -107,7 +109,33 @@ type Handler interface {
 }
 
 type BaseHandler struct {
+	binder GoAPIBinder
+}
+
+type BaseWebHandler struct {
 	binder Binder
+}
+
+func (h *BaseWebHandler) Error(ctx context.Context) *ErrorManager {
+	return ErrorManagerFromContext(ctx)
+}
+
+func (h *BaseWebHandler) Validate(v interface{}) error {
+	return validator.Validate(v)
+}
+
+func (h *BaseWebHandler) Bind(req *restful.Request, params interface{}) error {
+	// var err error
+	// req.Get
+	// req.Get[]
+
+	if h.binder == nil {
+		h.binder = &DefaultBinderWithRestful{}
+	}
+
+	return h.binder.Bind(req, params)
+	// byteBody := []byte(req.Body)
+	// return json.Unmarshal(byteBody, params)
 }
 
 func (h *BaseHandler) Error(ctx context.Context) *ErrorManager {

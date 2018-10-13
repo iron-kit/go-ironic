@@ -4,21 +4,28 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
 
+	restful "github.com/emicklei/go-restful"
 	go_api "github.com/micro/go-api/proto"
 )
 
 type (
-	// Binder is the interface that wraps the Bind method.
-	Binder interface {
+	// GoAPIBinder is the interface that wraps the Bind method.
+	GoAPIBinder interface {
 		Bind(req *go_api.Request, params interface{}) error
 	}
 
+	Binder interface {
+		Bind(req *restful.Request, params interface{}) error
+	}
+
 	// DefaultBinder is the default implementation of the Binder interface.
-	DefaultBinder struct{}
+	DefaultBinder            struct{}
+	DefaultBinderWithRestful struct{}
 
 	// BindUnmarshaler is the interface used to wrap the UnmarshalParam method.
 	BindUnmarshaler interface {
@@ -33,6 +40,135 @@ func getHeader(key string, req *go_api.Request) string {
 	}
 
 	return ""
+}
+
+func FormParams(req *restful.Request) (url.Values, error) {
+	request := req.Request
+	if strings.HasPrefix(request.Header.Get(HeaderContentType), MIMEMultipartForm) {
+		if err := request.ParseMultipartForm(32 << 20); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := request.ParseForm(); err != nil {
+			return nil, err
+		}
+	}
+	return request.Form, nil
+}
+
+func (b *DefaultBinderWithRestful) Bind(request *restful.Request, in interface{}) error {
+	req := request.Request
+	if req.ContentLength == 0 {
+		if req.Method == GET || req.Method == DELETE {
+			if err := b.bindData(in, req.URL.Query(), "query"); err != nil {
+				return err
+			}
+			return nil
+		}
+		return errors.New("Request body can't be empty")
+	}
+
+	contentType := req.Header.Get(HeaderContentType)
+
+	switch {
+	case strings.HasPrefix(contentType, MIMEApplicationJSON):
+		if err := json.NewDecoder(req.Body).Decode(in); err != nil {
+			return err
+		}
+		// return json.Unmarshal([]byte(req.Body), in)
+	case strings.HasPrefix(contentType, MIMEApplicationXML), strings.HasPrefix(contentType, MIMETextXML):
+		// return xml.Unmarshal([]byte(req.Body), in)
+		if err := xml.NewDecoder(req.Body).Decode(in); err != nil {
+			return err
+		}
+	case strings.HasPrefix(contentType, MIMEApplicationForm), strings.HasPrefix(contentType, MIMEMultipartForm):
+		// p := make(map[string][]string)
+		params, err := FormParams(request)
+		if err != nil {
+			return err
+		}
+
+		return b.bindData(in, params, "form")
+	// TODO support MIMEMultipartForm (form-data bind)
+	default:
+		return errors.New("UnsupportMediaType")
+	}
+
+	return nil
+}
+
+func (b *DefaultBinderWithRestful) bindData(ptr interface{}, data map[string][]string, tag string) error {
+	typ := reflect.TypeOf(ptr).Elem()
+	val := reflect.ValueOf(ptr).Elem()
+
+	if typ.Kind() != reflect.Struct {
+		return errors.New("binding element must be a struct")
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		typeField := typ.Field(i)
+		structField := val.Field(i)
+		if !structField.CanSet() {
+			continue
+		}
+		structFieldKind := structField.Kind()
+		inputFieldName := typeField.Tag.Get(tag)
+
+		if inputFieldName == "" {
+			inputFieldName = typeField.Name
+			// If tag is nil, we inspect if the field is a struct.
+			if _, ok := bindUnmarshaler(structField); !ok && structFieldKind == reflect.Struct {
+				if err := b.bindData(structField.Addr().Interface(), data, tag); err != nil {
+					return err
+				}
+				continue
+			}
+		}
+
+		inputValue, exists := data[inputFieldName]
+		if !exists {
+			// Go json.Unmarshal supports case insensitive binding.  However the
+			// url params are bound case sensitive which is inconsistent.  To
+			// fix this we must check all of the map values in a
+			// case-insensitive search.
+			inputFieldName = strings.ToLower(inputFieldName)
+			for k, v := range data {
+				if strings.ToLower(k) == inputFieldName {
+					inputValue = v
+					exists = true
+					break
+				}
+			}
+		}
+
+		if !exists {
+			continue
+		}
+
+		// Call this first, in case we're dealing with an alias to an array type
+		if ok, err := unmarshalField(typeField.Type.Kind(), inputValue[0], structField); ok {
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		numElems := len(inputValue)
+		if structFieldKind == reflect.Slice && numElems > 0 {
+			sliceOf := structField.Type().Elem().Kind()
+			slice := reflect.MakeSlice(structField.Type(), numElems, numElems)
+			for j := 0; j < numElems; j++ {
+				if err := setWithProperType(sliceOf, inputValue[j], slice.Index(j)); err != nil {
+					return err
+				}
+			}
+			val.Field(i).Set(slice)
+		} else if err := setWithProperType(typeField.Type.Kind(), inputValue[0], structField); err != nil {
+			return err
+
+		}
+	}
+	return nil
 }
 
 func (b *DefaultBinder) Bind(req *go_api.Request, in interface{}) error {
