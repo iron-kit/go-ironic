@@ -39,6 +39,9 @@ func DecodeToMap(s *pb.Struct) map[string]interface{} {
 }
 
 func decodeStructValue(v *pb.Value) interface{} {
+	if v == nil {
+		return nil
+	}
 	switch k := v.Kind.(type) {
 	case *pb.Value_NullValue:
 		return nil
@@ -62,7 +65,9 @@ func decodeStructValue(v *pb.Value) interface{} {
 }
 
 func encodeStructValue(v interface{}) *pb.Value {
-
+	if v == nil {
+		return nil
+	}
 	switch v := v.(type) {
 	case nil:
 		return nil
