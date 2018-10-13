@@ -116,8 +116,8 @@ type BaseWebHandler struct {
 	binder Binder
 }
 
-func (h *BaseWebHandler) Error(ctx context.Context) *ErrorManager {
-	return ErrorManagerFromContext(ctx)
+func (h *BaseWebHandler) Error() *ErrorManager {
+	return NewErrorManager("iunite.club.navo")
 }
 
 func (h *BaseWebHandler) Validate(v interface{}) error {
@@ -139,8 +139,8 @@ func (h *BaseWebHandler) Bind(req *restful.Request, params interface{}) error {
 }
 
 func (h *BaseHandler) Error(ctx context.Context) *ErrorManager {
-	// return ErrorManagerFromContext(ctx)
-	return NewErrorManager("iunite.club.navo")
+	return ErrorManagerFromContext(ctx)
+	// return NewErrorManager("iunite.club.navo")
 }
 
 func (h *BaseHandler) Validate(v interface{}) error {
