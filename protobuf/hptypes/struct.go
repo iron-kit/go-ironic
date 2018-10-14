@@ -3,6 +3,9 @@ package hptypes
 import (
 	"fmt"
 	"reflect"
+	"strings"
+
+	"gopkg.in/mgo.v2/bson"
 
 	pb "github.com/golang/protobuf/ptypes/struct"
 )
@@ -48,7 +51,18 @@ func decodeStructValue(v *pb.Value) interface{} {
 	case *pb.Value_BoolValue:
 		return k.BoolValue
 	case *pb.Value_StringValue:
-		return k.StringValue
+
+		s := k.StringValue
+		if bson.IsObjectIdHex(s) {
+			return bson.ObjectIdHex(s)
+		}
+
+		// if strings
+		if strings.HasPrefix(s, "objectId") {
+			return bson.ObjectIdHex(strings.Split(s, ":")[1])
+		}
+		// if strings.HasPrefix(k)
+		return s
 	case *pb.Value_NumberValue:
 		return k.NumberValue
 	case *pb.Value_StructValue:
@@ -65,6 +79,7 @@ func decodeStructValue(v *pb.Value) interface{} {
 }
 
 func encodeStructValue(v interface{}) *pb.Value {
+	val := v
 	if v == nil {
 		return nil
 	}
@@ -135,6 +150,13 @@ func encodeStructValue(v interface{}) *pb.Value {
 		return &pb.Value{
 			Kind: &pb.Value_NumberValue{
 				NumberValue: v,
+			},
+		}
+	case bson.ObjectId:
+		bv := val.(bson.ObjectId)
+		return &pb.Value{
+			Kind: &pb.Value_StringValue{
+				StringValue: fmt.Sprintf("objectId:%x", string(bv)),
 			},
 		}
 	case string:
