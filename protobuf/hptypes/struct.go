@@ -61,14 +61,16 @@ func decodeStructValue(v *pb.Value) interface{} {
 
 		if spattern.MatchString(s) {
 			sub := spattern.FindStringSubmatch(s)
-			return bson.ObjectId(sub[len(sub)-1])
+			return bson.ObjectIdHex(sub[len(sub)-1])
 		}
 
 		cpattern := regexp.MustCompile(`^objectId:(\w+)$`)
 		if cpattern.MatchString(s) {
-			// fmt.Println()
+			// fmt.Println("math objectId:x")
 			sub := cpattern.FindStringSubmatch(s)
-			return bson.ObjectId(sub[len(sub)-1])
+			// fmt.Println("find submatch", sub)
+			// fmt.Println
+			return bson.ObjectIdHex(sub[len(sub)-1])
 		}
 		// // if strings
 		// if strings.HasPrefix(s, "objectId") {

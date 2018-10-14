@@ -12,11 +12,13 @@ import (
 func Test_Reg(t *testing.T) {
 	id := bson.NewObjectId()
 
-	pattern := regexp.MustCompile(`^ObjectIdHex\(\"(\w+)\"\)$`)
-	res := pattern.MatchString(id.String())
+	pattern := regexp.MustCompile(`^objectId:(\w+)$`)
+	res := pattern.MatchString("sobjectId:1231" + id.Hex())
 
-	arr := pattern.FindStringSubmatch(id.String())
+	if res {
+		arr := pattern.FindStringSubmatch("objectId:" + id.Hex())
+		fmt.Printf("%v", arr[len(arr)-1])
+	}
 
-	fmt.Printf("%v", arr[len(arr)-1])
 	assert.Equal(t, res, true)
 }
