@@ -3,7 +3,7 @@ package hptypes
 import (
 	"fmt"
 	"reflect"
-	"strings"
+	"regexp"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -57,10 +57,20 @@ func decodeStructValue(v *pb.Value) interface{} {
 			return bson.ObjectIdHex(s)
 		}
 
-		// if strings
-		if strings.HasPrefix(s, "objectId") {
-			return bson.ObjectIdHex(strings.Split(s, ":")[1])
+		spattern := regexp.MustCompile(`ObjectIdHex\(\"(\w+)\"\)`)
+
+		if spattern.MatchString(s) {
+			return bson.ObjectId(spattern.FindAllString(s, -1)[0])
 		}
+
+		cpattern := regexp.MustCompile(`objectId:(\w+)`)
+		if cpattern.MatchString(s) {
+			return bson.ObjectId(cpattern.FindAllString(s, -1)[0])
+		}
+		// // if strings
+		// if strings.HasPrefix(s, "objectId") {
+		// 	return bson.ObjectIdHex(strings.Split(s, ":")[1])
+		// }
 		// if strings.HasPrefix(k)
 		return s
 	case *pb.Value_NumberValue:
