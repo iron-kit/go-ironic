@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"time"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -72,11 +73,16 @@ func decodeStructValue(v *pb.Value) interface{} {
 			// fmt.Println
 			return bson.ObjectIdHex(sub[len(sub)-1])
 		}
-		// // if strings
-		// if strings.HasPrefix(s, "objectId") {
-		// 	return bson.ObjectIdHex(strings.Split(s, ":")[1])
-		// }
-		// if strings.HasPrefix(k)
+
+		// 如果是时间
+		timePattern := regexp.MustCompile(`^time:(.+)$`)
+		if timePattern.MatchString(s) {
+			sub := timePattern.FindStringSubmatch(s)
+			if t, err := time.Parse(time.RFC1123Z, sub[len(sub)-1]); err != nil {
+				return t
+			}
+			return time.Now()
+		}
 		return s
 	case *pb.Value_NumberValue:
 		return k.NumberValue
@@ -167,6 +173,13 @@ func encodeStructValue(v interface{}) *pb.Value {
 				NumberValue: v,
 			},
 		}
+	case time.Time:
+		t := val.(time.Time)
+		return &pb.Value{
+			Kind: &pb.Value_StringValue{
+				StringValue: fmt.Sprintf("time:%s", t.Format(time.RFC1123Z)),
+			},
+		}
 	case bson.ObjectId:
 		bv := val.(bson.ObjectId)
 		return &pb.Value{
@@ -174,12 +187,13 @@ func encodeStructValue(v interface{}) *pb.Value {
 				StringValue: fmt.Sprintf("objectId:%x", string(bv)),
 			},
 		}
-	case string:
-		return &pb.Value{
-			Kind: &pb.Value_StringValue{
-				StringValue: v,
-			},
-		}
+	// case string:
+	// 	fmt.Println("is string")
+	// 	return &pb.Value{
+	// 		Kind: &pb.Value_StringValue{
+	// 			StringValue: v,
+	// 		},
+	// 	}
 	case error:
 		return &pb.Value{
 			Kind: &pb.Value_StringValue{
@@ -229,8 +243,14 @@ func toValue(v reflect.Value) *pb.Value {
 			return nil
 		}
 		values := make([]*pb.Value, size)
+
 		for i := 0; i < size; i++ {
-			values[i] = toValue(v.Index(i))
+			vk := v.Index(i)
+			if vk.Kind() == reflect.Interface && vk.Elem().Kind() == reflect.Map {
+				vk = vk.Elem()
+				// values[i] = toValue()
+			}
+			values[i] = toValue(vk)
 		}
 		return &pb.Value{
 			Kind: &pb.Value_ListValue{
@@ -282,6 +302,12 @@ func toValue(v reflect.Value) *pb.Value {
 				StructValue: &pb.Struct{
 					Fields: fields,
 				},
+			},
+		}
+	case reflect.String:
+		return &pb.Value{
+			Kind: &pb.Value_StringValue{
+				StringValue: v.String(),
 			},
 		}
 	default:
