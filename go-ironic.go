@@ -8,6 +8,7 @@ type ironicService struct {
 	service micro.Service
 }
 
+// NewService
 func NewService(opts ...micro.Option) micro.Service {
 	// opts = append(opts, micro.Context())
 	opts = append(opts, micro.WrapHandler(
