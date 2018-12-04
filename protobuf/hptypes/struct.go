@@ -6,9 +6,8 @@ import (
 	"regexp"
 	"time"
 
-	"gopkg.in/mgo.v2/bson"
-
 	pb "github.com/golang/protobuf/ptypes/struct"
+	"gopkg.in/mgo.v2/bson"
 )
 
 func EncodeToStruct(m map[string]interface{}) *pb.Struct {
@@ -75,14 +74,18 @@ func decodeStructValue(v *pb.Value) interface{} {
 		}
 
 		// 如果是时间
-		timePattern := regexp.MustCompile(`^time:(.+)$`)
-		if timePattern.MatchString(s) {
-			sub := timePattern.FindStringSubmatch(s)
-			if t, err := time.Parse(time.RFC1123Z, sub[len(sub)-1]); err != nil {
-				return t
-			}
-			return time.Now()
+		if parsedTime, err := time.Parse(time.RFC3339, s); err == nil {
+			return parsedTime
 		}
+		// s := time.RFC3339
+		// timePattern := regexp.MustCompile(`^time:(.+)$`)
+		// if timePattern.MatchString(s) {
+		// 	sub := timePattern.FindStringSubmatch(s)
+		// 	if t, err := time.Parse(time.RFC1123Z, sub[len(sub)-1]); err != nil {
+		// 		return t
+		// 	}
+		// 	return time.Now()
+		// }
 		return s
 	case *pb.Value_NumberValue:
 		return k.NumberValue
@@ -177,7 +180,8 @@ func encodeStructValue(v interface{}) *pb.Value {
 		t := val.(time.Time)
 		return &pb.Value{
 			Kind: &pb.Value_StringValue{
-				StringValue: fmt.Sprintf("time:%s", t.Format(time.RFC1123Z)),
+				// StringValue: fmt.Sprintf("time:%s", t.Format(time.RFC1123Z)),
+				StringValue: fmt.Sprintf("%s", t.Format(time.RFC3339)),
 			},
 		}
 	case bson.ObjectId:
