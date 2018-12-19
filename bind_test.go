@@ -1,10 +1,11 @@
 package ironic
 
 import (
-	go_api "github.com/micro/go-api/proto"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+
+	go_api "github.com/micro/go-api/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -63,6 +64,26 @@ func TestBindForm(t *testing.T) {
 
 	testBindOK(t, newReq(POST, TestForm, make(map[string]*go_api.Pair), make(map[string]*go_api.Pair), post), MIMEApplicationForm)
 	testBindError(t, newReq(POST, TestForm, make(map[string]*go_api.Pair), make(map[string]*go_api.Pair), post), MIMEApplicationForm)
+}
+
+func TestBindQuery(t *testing.T) {
+	testBindQueryOK(t, newReq(GET, TestJSON), MIMEApplicationJSON)
+}
+
+func testBindQueryOK(t *testing.T, req *go_api.Request, ctype string) {
+	ts := new(TestStruct)
+	binder := new(DefaultBinder)
+	req.Header[HeaderContentType] = &go_api.Pair{
+		Key:    HeaderContentType,
+		Values: []string{ctype},
+	}
+
+	err := binder.Bind(req, &ts)
+	t.Log(err)
+	if err == nil {
+		assert.Equal(t, 1, ts.ID)
+		assert.Equal(t, "title 1", ts.Title)
+	}
 }
 
 func testBindOK(t *testing.T, req *go_api.Request, ctype string) {
